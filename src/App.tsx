@@ -105,7 +105,7 @@ const App: React.FC = () => {
             </h2>
             <textarea 
               className="w-full h-48 bg-slate-900/50 border border-slate-700 rounded-xl p-4 focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none text-sm"
-              placeholder="Cole os nomes separados por linha ou vírgula..."
+              placeholder="Cole os nomes separados por linha, vírgula ou ponto e vírgula..."
               value={entrada}
               onChange={(e) => setEntrada(e.target.value)}
             />
