@@ -1,73 +1,54 @@
-# React + TypeScript + Vite
+# 🏆 Sorteador Pro - Sorteios Inteligentes & Offline
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
 
-Currently, two official plugins are available:
+O **Sorteador Pro** é uma aplicação web moderna, rápida e resiliente, focada em entregar sorteios aleatórios com uma experiência visual cinematográfica.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## 🛠️ Parte 1: Necessidades e Tecnologias
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Por que este projeto existe?
+Este software foi desenvolvido para resolver problemas críticos em eventos e dinâmicas:
+- **Resiliência Offline:** Uma das maiores necessidades era que a ferramenta funcionasse em locais sem qualquer acesso à internet (subsolos, centros de convenções isolados ou eventos externos). Uma vez carregado, o Sorteador Pro não depende de servidores externos para processar os nomes.
+- **Segurança de Dados:** Os nomes inseridos não são enviados para nenhum banco de dados externo; tudo acontece na memória local do navegador.
+- **Identidade Visual (White Label):** A capacidade de alterar o logotipo permite que a ferramenta seja personalizada para diferentes marcas em segundos.
 
-## Expanding the ESLint configuration
+### Stack Tecnológica
+- **React + TypeScript:** Para uma interface reativa e código livre de erros de tipagem.
+- **Tailwind CSS:** Para estilização rápida, garantindo que o app seja leve.
+- **Vite:** O motor de construção que permite uma compilação ultra-otimizada.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+---
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## 📖 Parte 2: Guia do Usuário
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+1. **Inserção:** Digite os nomes na caixa de texto.
+2. **Preparação:** Clique em **"Preparar Sorteio"** (isso organiza a lista na memória).
+3. **Sorteio:** Escolha a quantidade de ganhadores e clique no botão principal.
+4. **Customização:** Passe o mouse no ícone superior para trocar o logo pela imagem da sua empresa.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+---
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 💻 Parte 3: Como executar para Desenvolvimento
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Se você é um desenvolvedor e quer modificar o código:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+1. **Clonar:** `git clone https://github.com/seu-usuario/sorteador-pro.git`
+2. **Instalar:** `npm install` (requer Node.js instalado)
+3. **Rodar:** `npm run dev`
+4. **Acessar:** `http://localhost:5173` no navegador.
+
+---
+
+## 📦 Parte 4: Como Compilar para Uso Permanente (Sem CMD)
+
+Se você quer gerar uma versão que pode ser levada em um **Pen Drive** e aberta em qualquer computador sem precisar instalar nada ou digitar comandos, siga este passo a passo:
+
+### 1. Gerar o Pacote de Distribuição
+No terminal do seu projeto, execute o comando:
+```bash
+npm run build
