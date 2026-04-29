@@ -17,7 +17,7 @@ Este software foi desenvolvido para resolver problemas críticos em eventos e di
 - **Segurança de Dados:** Os nomes inseridos não são enviados para nenhum banco de dados externo; tudo acontece na memória local do navegador.
 - **Identidade Visual (White Label):** A capacidade de alterar o logotipo permite que a ferramenta seja personalizada para diferentes marcas em segundos.
 
-### Stack Tecnológica
+### Tecnologias
 - **React + TypeScript:** Para uma interface reativa e código livre de erros de tipagem.
 - **Tailwind CSS:** Para estilização rápida, garantindo que o app seja leve.
 - **Vite:** O motor de construção que permite uma compilação ultra-otimizada.
@@ -50,5 +50,11 @@ Se você quer gerar uma versão que pode ser levada em um **Pen Drive** e aberta
 
 ### 1. Gerar o Pacote de Distribuição
 No terminal do seu projeto, execute o comando:
-```bash
-npm run build
+`npm run build`
+
+### 2. O que acontece agora?
+O Vite criará uma pasta chamada dist na raiz do seu projeto.
+
+Esta pasta contém tudo o que o site precisa: HTML, CSS e JavaScript otimizados.
+
+Ela é o produto final.
