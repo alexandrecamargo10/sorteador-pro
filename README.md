@@ -53,7 +53,7 @@ No terminal do seu projeto, execute o comando:
 `npm run build`
 
 ### 2. O que acontece agora?
-O Vite criará uma pasta chamada dist na raiz do seu projeto.
+O Vite criará uma pasta chamada dist na raiz do projeto.
 
 Esta pasta contém tudo o que o site precisa: HTML, CSS e JavaScript otimizados.
 
