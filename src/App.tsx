@@ -148,10 +148,10 @@ const App: React.FC = () => {
               <div className="text-center w-full">
                 <Trophy size={60} className="text-yellow-400 mb-4 mx-auto drop-shadow-lg" />
                 <p className="text-blue-200 uppercase tracking-widest font-semibold mb-2">Vencedor(es):</p>
-                <div className="flex flex-wrap justify-center gap-6">
+                <div className="flex flex-col items-center gap-6">
                   {ganhadoresAtuais.map((nome, i) => (
-                    <span key={i} className="text-6xl md:text-8xl font-black text-white drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)] animate-in fade-in zoom-in duration-300">
-                      {nome}
+                    <span key={i} className={`${i % 2 === 0 ? 'text-white' : 'text-slate-300'} text-2xl md:text-4xl font-black drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)] animate-in fade-in zoom-in duration-300`}>
+                      - {nome} -
                     </span>
                   ))}
                 </div>
