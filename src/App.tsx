@@ -86,7 +86,7 @@ const App: React.FC = () => {
               min="1" 
               className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-xl font-bold text-center"
               value={quantidade}
-              onChange={(e) => setQuantidade(Math.max(1, Number(e.target.value)))}
+              onChange={(e) => setQuantidade(Math.max(1, Number(e.target.value)))} // Evita que o usuário digite 0, utilizando o Math.max para comparar o número digitado com 1 e retornando sempre o maior valor. Programação defensiva!
             />
           </div>
         </section>
