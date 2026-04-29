@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { filtrarNomes, realizarSorteio } from './utils/logicaSorteador';
 import { Trophy, Users, RefreshCcw, ListPlus, LayoutPanelTop } from 'lucide-react';
 
@@ -10,6 +10,8 @@ const App: React.FC = () => {
   const [historico, setHistorico] = useState<string[]>([]);
   const [quantidade, setQuantidade] = useState(1);
   const [estaSorteando, setEstaSorteando] = useState(false);
+  const [logoPersonalizada, setLogoPersonalizada] = useState<string | null>(null);
+  const refEntradaArquivo = useRef<HTMLInputElement>(null);
 
   // Carrega os nomes digitados para o sistema
   const prepararSorteio = () => {
@@ -46,12 +48,51 @@ const App: React.FC = () => {
     setHistorico([]);
   };
 
+  const tratarMudancaLogo = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const arquivoSelecionado = event.target.files?.[0];
+
+    if (arquivoSelecionado) {
+      // Cria um endereço temporário para a imagem que o usuário enviou
+      const enderecoImagem = URL.createObjectURL(arquivoSelecionado);
+      setLogoPersonalizada(enderecoImagem);
+    }
+  }
+
+  const abrirEscolhaArquivo = () => {
+    // Simula um clique no input de arquivo que está escondido
+    refEntradaArquivo.current?.click();
+  }
+
   return (
     <div className="min-h-screen p-4 md:p-8 flex flex-col items-center">
       <header className="mb-12 text-center">
-        <h1 className="text-4xl font-black flex items-center gap-3 justify-center mb-2">
-          <LayoutPanelTop className="text-blue-500" /> SORTEADOR <span className="text-blue-500 text-outline">PRO</span>
-        </h1>
+        <div className="relative group/icone flex items-center gap-2">
+          {/* Input de arquivo invisível */}
+          <input 
+            type="file" 
+            ref={refEntradaArquivo} 
+            onChange={tratarMudancaLogo} 
+            accept="image/*" 
+            className="hidden" 
+          />
+          <LayoutPanelTop className="text-blue-500 cursor-pointer hover:text-white transition-colors" onClick={abrirEscolhaArquivo}/> 
+          {/* Lógica do Título vs Imagem */}
+          {logoPersonalizada ? (
+            <img 
+              src={logoPersonalizada} 
+              alt="Logo do Usuário" 
+              className="h-32 w-auto object-contain animate-in fade-in zoom-in duration-500" 
+            />
+          ) : (
+            <h1 className="text-4xl font-black text-white tracking-tighter italic">
+              SORTEADOR <span className="text-blue-500">PRO</span>
+            </h1>
+          )}  
+          {/* Tooltip customizada com Tailwind */}
+          <span className="absolute -top-5 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover/icone:opacity-100 transition-opacity duration-300 whitespace-nowrap pointer-events-none shadow-xl border border-slate-700">
+            Alterar Logotipo
+          </span>
+        </div>
       </header>
 
       <main className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-8">
