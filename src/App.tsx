@@ -52,7 +52,6 @@ const App: React.FC = () => {
         <h1 className="text-4xl font-black flex items-center gap-3 justify-center mb-2">
           <LayoutPanelTop className="text-blue-500" /> SORTEADOR <span className="text-blue-500 text-outline">PRO</span>
         </h1>
-        <p className="text-slate-400">Desenvolvido por Meu Parça dos Códigos</p>
       </header>
 
       <main className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -160,8 +159,20 @@ const App: React.FC = () => {
             </div>
           </div>
         </section>
-
       </main>
+      <footer className="mt-8 py-2 flex flex-col items-center justify-center w-full border-t border-slate-800/30">
+        <p className="text-slate-400 text-sm">
+          Desenvolvido por{' '}
+          <a 
+            href="https://www.linkedin.com/in/alexandrecamargo10/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-blue-400 hover:text-blue-300 transition-colors font-medium"
+          >
+            Alexandre Camargo
+          </a>
+        </p>
+      </footer>
     </div>
   );
 };

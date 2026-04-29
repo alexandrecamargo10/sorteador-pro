@@ -4,7 +4,7 @@
  */
 export const filtrarNomes = (textoBruto: string): string[] => {
   return textoBruto
-    .split(/[\n,]+/) // Divide por quebra de linha ou vírgula
+    .split(/[\n,;]+/) // Divide por quebra de linha ou vírgula
     .map(nome => nome.trim()) // Remove espaços em branco nas pontas
     .filter(nome => nome.length > 0); // Remove linhas vazias
 };
