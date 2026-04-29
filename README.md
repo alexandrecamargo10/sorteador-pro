@@ -52,9 +52,17 @@ Se você quer gerar uma versão que pode ser levada em um **Pen Drive** e aberta
 No terminal do seu projeto, execute o comando:
 `npm run build`
 
-### 2. O que acontece agora?
 O Vite criará uma pasta chamada dist na raiz do projeto.
 
 Esta pasta contém tudo o que o site precisa: HTML, CSS e JavaScript otimizados.
 
 Ela é o produto final.
+
+## 📦 Parte 5: Versão Portátil (Pendrive)
+
+Para utilizar a ferramenta sem internet e sem instalar nada:
+1. Baixe o arquivo `SorteadorPro.html` disponível na pasta de dist deste projeto.
+2. Dê um clique duplo no arquivo.
+3. Ele abrirá no seu navegador padrão e funcionará instantaneamente, mesmo sem conexão.
+
+*Nota técnica: Esta versão foi compilada utilizando o `vite-plugin-singlefile`, que embutiu todas as dependências em um único arquivo autônomo.*
