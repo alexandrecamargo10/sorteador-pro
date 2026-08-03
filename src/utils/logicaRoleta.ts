@@ -43,13 +43,67 @@ export const ITENS_PADRAO_ROLETA: ItemRoleta[] = [
 export const aplicarPorcentagemJusta = (itens: ItemRoleta[]): ItemRoleta[] => {
   if (itens.length === 0) return [];
   const percentualExato = 100 / itens.length;
-  // Arredonda para 1 casa decimal para exibição amigável
   const percentualFormatado = Number(percentualExato.toFixed(1));
 
-  return itens.map(item => ({
-    ...item,
-    peso: percentualFormatado
-  }));
+  let somaCalculada = 0;
+  return itens.map((item, index) => {
+    if (index === itens.length - 1) {
+      // Ajusta resíduo no último item para totalizar 100%
+      const pesoFinal = Number((100 - somaCalculada).toFixed(1));
+      return { ...item, peso: Math.max(0, pesoFinal) };
+    }
+    somaCalculada += percentualFormatado;
+    return { ...item, peso: percentualFormatado };
+  });
+};
+
+/**
+ * Redistribui a porcentagem restante igualmente entre todos os demais itens sempre que um item
+ * tem seu peso/porcentagem (%) alterado pelo usuário (ex: se um item for definido para 50%, os 50%
+ * restantes são divididos igualmente entre os outros itens), mantendo a soma sempre em exatos 100%.
+ */
+export const redistribuirPorcentagens = (
+  itens: ItemRoleta[],
+  idModificado: string,
+  novoPesoDigitado: number
+): ItemRoleta[] => {
+  if (itens.length === 0) return [];
+  if (itens.length === 1) {
+    return [{ ...itens[0], peso: 100 }];
+  }
+
+  // Clampa o valor entre 0 e 100
+  const novoPesoModificado = Math.min(100, Math.max(0, Math.round(novoPesoDigitado * 10) / 10));
+  const resto = Number((100 - novoPesoModificado).toFixed(1));
+
+  const outrosItens = itens.filter(item => item.id !== idModificado);
+  const quantidadeOutros = outrosItens.length;
+
+  // Divisão igualitária do saldo restante entre os outros itens
+  const pesoIgualOutros = resto / quantidadeOutros;
+  const pesoFormatado = Number(pesoIgualOutros.toFixed(1));
+
+  let acumuladoOutros = 0;
+
+  const novosOutros = outrosItens.map((item, index) => {
+    if (index === quantidadeOutros - 1) {
+      // Ajusta resíduo decimal no último item para garantir a soma exata de 100%
+      const diferenca = Number((resto - acumuladoOutros).toFixed(1));
+      const pesoFinal = Number(Math.max(0, diferenca).toFixed(1));
+      return { ...item, peso: pesoFinal };
+    }
+
+    acumuladoOutros += pesoFormatado;
+    return { ...item, peso: pesoFormatado };
+  });
+
+  return itens.map(item => {
+    if (item.id === idModificado) {
+      return { ...item, peso: Number(novoPesoModificado.toFixed(1)) };
+    }
+    const itemAtualizado = novosOutros.find(o => o.id === item.id);
+    return itemAtualizado || item;
+  });
 };
 
 /**

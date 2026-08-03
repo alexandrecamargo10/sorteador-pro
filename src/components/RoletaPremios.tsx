@@ -1,30 +1,37 @@
 import React, { useState, useRef } from 'react';
 import type { ItemRoleta, HistoricoRoleta } from '../types/roleta';
-import { 
-  ITENS_PADRAO_ROLETA, 
-  ESQUEMAS_CORES, 
-  aplicarPorcentagemJusta, 
-  sortearItemRoleta, 
+import {
+  ITENS_PADRAO_ROLETA,
+  ESQUEMAS_CORES,
+  aplicarPorcentagemJusta,
+  redistribuirPorcentagens,
+  sortearItemRoleta,
   aplicarEsquemaCores,
   tocarSomCliqueSintetizado,
-  tocarSomVitoriaSintetizado 
+  tocarSomVitoriaSintetizado
 } from '../utils/logicaRoleta';
 import { RoletaCanvas } from './RoletaCanvas';
-import { 
-  Settings, 
-  Lock, 
-  Unlock, 
-  Plus, 
-  Trash2, 
-  RefreshCcw, 
-  Trophy, 
-  Volume2, 
-  Palette, 
-  Scale, 
-  Clock, 
-  ChevronDown, 
+import {
+  Settings,
+  Lock,
+  Unlock,
+  Plus,
+  Trash2,
+  RefreshCcw,
+  Trophy,
+  Volume2,
+  Palette,
+  Scale,
+  Clock,
+  ChevronDown,
   ChevronUp,
-  Upload
+  Upload,
+  Eye,
+  EyeOff,
+  Maximize2,
+  Minimize2,
+  KeyRound,
+  Check
 } from 'lucide-react';
 
 export const RoletaPremios: React.FC = () => {
@@ -36,6 +43,10 @@ export const RoletaPremios: React.FC = () => {
   const [vencedorAtual, setVencedorAtual] = useState<ItemRoleta | null>(null);
   const [historico, setHistorico] = useState<HistoricoRoleta[]>([]);
 
+  // Novos Estados Solicitados (Exibição do Histórico, Tela Cheia e Alteração de Senha)
+  const [exibirHistorico, setExibirHistorico] = useState<boolean>(true);
+  const [modoTelaCheia, setModoTelaCheia] = useState<boolean>(false);
+
   // Estados de Customização de Cores
   const [esquemaSelecionado, setEsquemaSelecionado] = useState<string>('vibrante');
 
@@ -46,10 +57,12 @@ export const RoletaPremios: React.FC = () => {
   const refAudioVitoriaInput = useRef<HTMLInputElement>(null);
   const audioGiroElementRef = useRef<HTMLAudioElement | null>(null);
 
-  // Estados de Proteção Admin e Painel
+  // Estados de Proteção Admin e Senha
   const [painelAberto, setPainelAberto] = useState<boolean>(true);
   const [protegidoPorSenha, setProtegidoPorSenha] = useState<boolean>(false);
   const [senhaAdmin, setSenhaAdmin] = useState<string>('1234');
+  const [novaSenhaAdminInput, setNovaSenhaAdminInput] = useState<string>('');
+  const [mensagemSenhaAlterada, setMensagemSenhaAlterada] = useState<boolean>(false);
   const [senhaInformada, setSenhaInformada] = useState<string>('');
   const [adminAutenticado, setAdminAutenticado] = useState<boolean>(false);
   const [erroSenha, setErroSenha] = useState<string>('');
@@ -66,18 +79,13 @@ export const RoletaPremios: React.FC = () => {
     // 1. Determina o vencedor por probabilidade ponderada
     const { itemVencedor, indiceVencedor } = sortearItemRoleta(itens);
 
-    // 2. Cálculo dos Ângulos para alinhar com o Ponteiro no Topo (270° ou -90° radianos => 1.5 * Math.PI)
+    // 2. Cálculo dos Ângulos para alinhar com o Ponteiro no Topo (1.5 * Math.PI)
     const totalFatias = itens.length;
     const anguloPorFatia = (2 * Math.PI) / totalFatias;
-
-    // O centro do segmento vencedor deve ficar em (1.5 * Math.PI)
     const anguloCentroFatia = (indiceVencedor + 0.5) * anguloPorFatia;
-    
-    // N voltas completas de rotação para criar o efeito contínuo
-    const voltasCompletas = 6 + Math.floor(Math.random() * 4); 
+
+    const voltasCompletas = 6 + Math.floor(Math.random() * 4);
     const anguloAlvoRelativo = (1.5 * Math.PI) - anguloCentroFatia;
-    
-    // Normaliza para garantir giro sempre no sentido horário
     const deltaAngulo = (voltasCompletas * 2 * Math.PI) + (anguloAlvoRelativo - (anguloAtual % (2 * Math.PI)));
 
     // Configuração do Áudio de Giro
@@ -86,7 +94,7 @@ export const RoletaPremios: React.FC = () => {
         audioGiroElementRef.current = new Audio(audioGiroUrl);
       }
       audioGiroElementRef.current.currentTime = 0;
-      audioGiroElementRef.current.play().catch(() => {});
+      audioGiroElementRef.current.play().catch(() => { });
     }
 
     const duracaoMs = tempoGiro * 1000;
@@ -98,13 +106,11 @@ export const RoletaPremios: React.FC = () => {
       const decorrido = agora - inicioTempo;
       const progresso = Math.min(1, decorrido / duracaoMs);
 
-      // Função de desaceleração suave (Ease Out)
       const easeOut = 1 - Math.pow(1 - progresso, 3);
       const anguloFrame = anguloAtual + deltaAngulo * easeOut;
 
       setAnguloAtual(anguloFrame);
 
-      // Toca som de clique a cada passagem de fatia caso não haja áudio customizado
       if (!audioGiroUrl) {
         const fatiaAtualIndex = Math.floor((((1.5 * Math.PI - anguloFrame) % (2 * Math.PI) + (2 * Math.PI)) % (2 * Math.PI)) / anguloPorFatia);
         if (fatiaAtualIndex !== ultimoIndiceSom) {
@@ -116,24 +122,20 @@ export const RoletaPremios: React.FC = () => {
       if (progresso < 1) {
         requestAnimationFrame(animar);
       } else {
-        // Fim do giro!
         setEstaGirando(false);
         setVencedorAtual(itemVencedor);
 
-        // Para áudio de giro customizado se estiver tocando
         if (audioGiroElementRef.current) {
           audioGiroElementRef.current.pause();
         }
 
-        // Toca som de vitória
         if (audioVitoriaUrl) {
           const audioVitoria = new Audio(audioVitoriaUrl);
-          audioVitoria.play().catch(() => {});
+          audioVitoria.play().catch(() => { });
         } else {
           tocarSomVitoriaSintetizado();
         }
 
-        // Registra no histórico
         const novoRegistro: HistoricoRoleta = {
           id: Date.now().toString(),
           itemTexto: itemVencedor.texto,
@@ -171,7 +173,13 @@ export const RoletaPremios: React.FC = () => {
     setItens(aplicarPorcentagemJusta(novaLista));
   };
 
-  const atualizarItem = (id: string, campo: keyof ItemRoleta, valor: string | number) => {
+  // Atualização com Distribuição Automática de Probabilidades (Soma = 100%)
+  const atualizarPesoItem = (id: string, novoPeso: number) => {
+    const itensAtualizados = redistribuirPorcentagens(itens, id, novoPeso);
+    setItens(itensAtualizados);
+  };
+
+  const atualizarItemTextoOuCor = (id: string, campo: 'texto' | 'cor', valor: string) => {
     setItens(prev => prev.map(item => {
       if (item.id === id) {
         return { ...item, [campo]: valor };
@@ -207,7 +215,38 @@ export const RoletaPremios: React.FC = () => {
     }
   };
 
-  // Autenticação Admin
+  // Alternar Status Livre/Protegido por Senha
+  const toggleProtegidoPorSenha = () => {
+    const proximoStatus = !protegidoPorSenha;
+    setProtegidoPorSenha(proximoStatus);
+    if (proximoStatus) {
+      setAdminAutenticado(false);
+      setSenhaInformada('');
+      setErroSenha('');
+    }
+  };
+
+  // Alternar Minimizar / Expandir Painel de Ajustes
+  const togglePainelAberto = () => {
+    if (painelAberto) {
+      // Ao minimizar/fechar o painel com o status Protegido ativo, exige a senha para expandir novamente
+      if (protegidoPorSenha) {
+        setAdminAutenticado(false);
+        setSenhaInformada('');
+        setErroSenha('');
+      }
+      setPainelAberto(false);
+    } else {
+      // Ao expandir o painel, se protegido por senha, força solicitação da senha
+      if (protegidoPorSenha && !adminAutenticado) {
+        setSenhaInformada('');
+        setErroSenha('');
+      }
+      setPainelAberto(true);
+    }
+  };
+
+  // Autenticação e Alteração de Senha Admin
   const validarSenhaAdmin = (e: React.FormEvent) => {
     e.preventDefault();
     if (senhaInformada === senhaAdmin) {
@@ -218,21 +257,33 @@ export const RoletaPremios: React.FC = () => {
     }
   };
 
+  const handleSalvarNovaSenhaAdmin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (novaSenhaAdminInput.trim().length === 0) return;
+    setSenhaAdmin(novaSenhaAdminInput.trim());
+    setNovaSenhaAdminInput('');
+    setMensagemSenhaAlterada(true);
+    setTimeout(() => setMensagemSenhaAlterada(false), 3000);
+  };
+
   return (
-    <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <div className={`w-full max-w-6xl transition-all duration-300 ${modoTelaCheia
+      ? 'flex flex-col items-center max-w-4xl mx-auto space-y-8'
+      : 'grid grid-cols-1 lg:grid-cols-12 gap-8'
+      }`}>
 
       {/* ========================================================= */}
-      {/* COLUNA ESQUERDA: ROLETA E SORTEIO (Livre para qualquer um) */}
+      {/* SEÇÃO PRINCIPAL DA ROLETA (Livre para qualquer usuário)  */}
       {/* ========================================================= */}
-      <section className="lg:col-span-7 flex flex-col items-center gap-6">
-        
+      <section className={`${modoTelaCheia ? 'w-full flex flex-col items-center gap-6' : 'lg:col-span-7 flex flex-col items-center gap-6'}`}>
+
         {/* CONTAINER DA ROLETA */}
         <div className="relative w-full bg-slate-800/50 p-6 md:p-8 rounded-[2.5rem] border border-slate-700 shadow-2xl flex flex-col items-center justify-center overflow-hidden">
-          
-          <RoletaCanvas 
-            itens={itens} 
-            anguloAtual={anguloAtual} 
-            estaGirando={estaGirando} 
+
+          <RoletaCanvas
+            itens={itens}
+            anguloAtual={anguloAtual}
+            estaGirando={estaGirando}
           />
 
           {/* Anúncio do Vencedor */}
@@ -247,7 +298,7 @@ export const RoletaPremios: React.FC = () => {
           )}
         </div>
 
-        {/* BOTÃO GIRAR ROLETA (Sem login/senha necessário) */}
+        {/* BOTÃO GIRAR ROLETA */}
         <button
           disabled={estaGirando || itens.length === 0}
           onClick={girarRoleta}
@@ -257,70 +308,72 @@ export const RoletaPremios: React.FC = () => {
           {estaGirando ? 'GIRANDO ROLETA...' : 'GIRAR ROLETA'}
         </button>
 
-        {/* HISTÓRICO DE GANHADORES DA ROLETA */}
-        <div className="w-full bg-slate-800/30 p-6 rounded-3xl border border-slate-700 h-60 flex flex-col">
-          <h4 className="text-xs font-black text-slate-400 mb-4 uppercase tracking-[0.2em] flex items-center gap-2">
-            <Trophy size={16} className="text-yellow-400" /> HISTÓRICO DE PRÊMIOS SORTEADOS
-          </h4>
-          <div className="overflow-y-auto space-y-2 flex-1 scrollbar-hide">
-            {historico.length > 0 ? (
-              historico.map((h) => (
-                <div key={h.id} className="flex justify-between items-center bg-slate-900/50 p-3 rounded-xl border border-slate-700/50">
-                  <div className="flex items-center gap-3">
-                    <span className="w-4 h-4 rounded-full border border-white/20" style={{ backgroundColor: h.cor }} />
-                    <span className="font-bold text-slate-200">{h.itemTexto}</span>
+        {/* HISTÓRICO DE GANHADORES DA ROLETA (Condicionado à opção de Exibir/Ocultar) */}
+        {exibirHistorico && (
+          <div className="w-full bg-slate-800/30 p-6 rounded-3xl border border-slate-700 h-60 flex flex-col transition-all">
+            <h4 className="text-xs font-black text-slate-400 mb-4 uppercase tracking-[0.2em] flex items-center gap-2">
+              <Trophy size={16} className="text-yellow-400" /> HISTÓRICO DE PRÊMIOS SORTEADOS
+            </h4>
+            <div className="overflow-y-auto space-y-2 flex-1 scrollbar-hide">
+              {historico.length > 0 ? (
+                historico.map((h) => (
+                  <div key={h.id} className="flex justify-between items-center bg-slate-900/50 p-3 rounded-xl border border-slate-700/50">
+                    <div className="flex items-center gap-3">
+                      <span className="w-4 h-4 rounded-full border border-white/20" style={{ backgroundColor: h.cor }} />
+                      <span className="font-bold text-slate-200">{h.itemTexto}</span>
+                    </div>
+                    <span className="text-xs text-slate-400 font-medium">{h.dataHora}</span>
                   </div>
-                  <span className="text-xs text-slate-400 font-medium">{h.dataHora}</span>
-                </div>
-              ))
-            ) : (
-              <p className="text-center text-slate-500 mt-8 text-sm">Nenhum prêmio sorteado na roleta ainda.</p>
-            )}
+                ))
+              ) : (
+                <p className="text-center text-slate-500 mt-8 text-sm">Nenhum prêmio sorteado na roleta ainda.</p>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </section>
 
       {/* ========================================================= */}
-      {/* COLUNA DIREITA: PAINEL DE CONFIGURAÇÃO & REGRAS ADMIN    */}
+      {/* SEÇÃO DIREITA OU INFERIOR: PAINEL DE AJUSTES & DEFINIÇÕES */}
       {/* ========================================================= */}
-      <section className="lg:col-span-5 space-y-6">
+      <section className={`${modoTelaCheia ? 'w-full space-y-6' : 'lg:col-span-5 space-y-6'}`}>
         <div className="bg-slate-800/50 rounded-3xl border border-slate-700 shadow-xl overflow-hidden">
-          
+
           {/* CABEÇALHO DO PAINEL DE CONFIGURAÇÃO */}
-          <div className="p-5 bg-slate-800/80 border-b border-slate-700 flex items-center justify-between">
+          <div className="p-5 bg-slate-800/80 border-b border-slate-700 flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2">
               <Settings size={20} className="text-blue-400" />
               <h2 className="font-bold text-slate-200 uppercase tracking-wider text-sm">Ajustes & Definições</h2>
             </div>
 
             <div className="flex items-center gap-2">
-              {/* Botão para alternar trava por senha */}
-              <button 
-                onClick={() => setProtegidoPorSenha(!protegidoPorSenha)}
-                className={`p-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1 border ${
-                  protegidoPorSenha ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' : 'bg-slate-700 text-slate-400 border-slate-600'
-                }`}
-                title={protegidoPorSenha ? "Proteção por senha ATIVADA" : "Ativar proteção por senha"}
+              {/* Botão de Trava por Senha */}
+              <button
+                onClick={toggleProtegidoPorSenha}
+                className={`p-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1 border cursor-pointer ${protegidoPorSenha ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' : 'bg-slate-700 text-slate-400 border-slate-600'
+                  }`}
+                title={protegidoPorSenha ? "Proteção por senha ATIVADA (clique para alternar)" : "Ativar proteção por senha"}
               >
                 {protegidoPorSenha ? <Lock size={14} /> : <Unlock size={14} />}
                 {protegidoPorSenha ? 'Protegido' : 'Livre'}
               </button>
 
-              {/* Botão para Minimizar / Expandir */}
-              <button 
-                onClick={() => setPainelAberto(!painelAberto)}
-                className="p-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors"
+              {/* Botão de Minimizar / Expandir Painel */}
+              <button
+                onClick={togglePainelAberto}
+                className="p-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors cursor-pointer"
+                title={painelAberto ? "Minimizar painel" : "Expandir painel (exige senha se protegido)"}
               >
                 {painelAberto ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
               </button>
             </div>
           </div>
 
-          {/* CONTEÚDO DO PAINEL (Respeita trava por senha e minimização) */}
+          {/* CONTEÚDO DO PAINEL */}
           {painelAberto && (
             <div className="p-6 space-y-6">
 
-              {/* TELA DE SOLICITAÇÃO DE SENHA (Se estiver protegido e não autenticado) */}
+              {/* AUTENTICAÇÃO SE PROTEGIDO POR SENHA */}
               {protegidoPorSenha && !adminAutenticado ? (
                 <form onSubmit={validarSenhaAdmin} className="space-y-4 py-4 text-center">
                   <div className="w-12 h-12 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center mx-auto text-amber-400 mb-2">
@@ -328,9 +381,9 @@ export const RoletaPremios: React.FC = () => {
                   </div>
                   <h3 className="font-bold text-slate-200 text-lg">Acesso Restrito ao Admin</h3>
                   <p className="text-xs text-slate-400 max-w-xs mx-auto">
-                    As configurações de probabilidade, áudio e itens estão protegidas por senha.
+                    As configurações de probabilidade, áudio, visual e itens estão protegidas por senha. Senha padrão: 1234.
                   </p>
-                  
+
                   <input
                     type="password"
                     placeholder="Digite a senha..."
@@ -343,22 +396,54 @@ export const RoletaPremios: React.FC = () => {
 
                   <button
                     type="submit"
-                    className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition-all"
+                    className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition-all cursor-pointer"
                   >
                     DESBLOQUEAR CONFIGURAÇÕES
                   </button>
-                  <p className="text-[10px] text-slate-500 italic">Dica: A senha padrão inicial é "1234"</p>
                 </form>
               ) : (
-                /* PAINEL LIBERADO DE AJUSTES */
+                /* PAINEL LIBERADO DE CONFIGURAÇÕES */
                 <div className="space-y-6">
 
-                  {/* 1. TEMPO DE GIRO DA ROLETA */}
+                  {/* 1. OPÇÕES VISUAIS: MODO TELA CHEIA E EXIBIÇÃO DE HISTÓRICO */}
+                  <div className="bg-slate-900/40 p-4 rounded-2xl border border-slate-700/60 space-y-3">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                      <Maximize2 size={16} className="text-blue-400" /> Exibição & Layout
+                    </label>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                      {/* Toggle de Modo Tela Cheia (Centralizado) */}
+                      <button
+                        onClick={() => setModoTelaCheia(!modoTelaCheia)}
+                        className={`p-3 rounded-xl border font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${modoTelaCheia
+                          ? 'bg-blue-600/30 text-blue-300 border-blue-500'
+                          : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                          }`}
+                      >
+                        {modoTelaCheia ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                        <span>{modoTelaCheia ? "Sair da Tela Cheia" : "Modo Tela Cheia"}</span>
+                      </button>
+
+                      {/* Toggle de Ocultar / Exibir Histórico */}
+                      <button
+                        onClick={() => setExibirHistorico(!exibirHistorico)}
+                        className={`p-3 rounded-xl border font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${exibirHistorico
+                          ? 'bg-emerald-600/30 text-emerald-300 border-emerald-500'
+                          : 'bg-slate-800 hover:bg-slate-700 text-slate-400 border-slate-700'
+                          }`}
+                      >
+                        {exibirHistorico ? <Eye size={16} /> : <EyeOff size={16} />}
+                        <span>{exibirHistorico ? "Histórico Visível" : "Histórico Oculto"}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 2. TEMPO DE GIRO DA ROLETA */}
                   <div>
                     <label className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2 mb-2">
                       <Clock size={16} className="text-blue-400" /> Tempo de Giro: <span className="text-white text-sm font-black">{tempoGiro}s</span>
                     </label>
-                    <input 
+                    <input
                       type="range"
                       min="2"
                       max="12"
@@ -373,7 +458,7 @@ export const RoletaPremios: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* 2. ESQUEMAS DE CORES PRONTOS */}
+                  {/* 3. ESQUEMAS DE CORES PRONTOS */}
                   <div>
                     <label className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2 mb-3">
                       <Palette size={16} className="text-purple-400" /> Paletas de Cores Prontas
@@ -383,11 +468,10 @@ export const RoletaPremios: React.FC = () => {
                         <button
                           key={e.id}
                           onClick={() => handleMudarEsquemaCores(e.id)}
-                          className={`p-2.5 rounded-xl text-xs font-bold flex items-center justify-between border transition-all ${
-                            esquemaSelecionado === e.id 
-                              ? 'bg-blue-600/20 border-blue-500 text-white' 
-                              : 'bg-slate-900/60 border-slate-700/60 text-slate-300 hover:bg-slate-900'
-                          }`}
+                          className={`p-2.5 rounded-xl text-xs font-bold flex items-center justify-between border transition-all cursor-pointer ${esquemaSelecionado === e.id
+                            ? 'bg-blue-600/20 border-blue-500 text-white'
+                            : 'bg-slate-900/60 border-slate-700/60 text-slate-300 hover:bg-slate-900'
+                            }`}
                         >
                           <span>{e.nome}</span>
                           <div className="flex -space-x-1">
@@ -400,43 +484,41 @@ export const RoletaPremios: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* 3. AUDIOS CUSTOMIZADOS (OPCIONAL) */}
+                  {/* 4. AUDIOS CUSTOMIZADOS */}
                   <div className="bg-slate-900/40 p-4 rounded-2xl border border-slate-700/60 space-y-3">
                     <label className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
                       <Volume2 size={16} className="text-emerald-400" /> Sons Personalizados (Opcional)
                     </label>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                      {/* Som de Giro */}
                       <div>
-                        <input 
-                          type="file" 
-                          ref={refAudioGiroInput} 
-                          onChange={handleUploadAudioGiro} 
-                          accept="audio/*" 
-                          className="hidden" 
+                        <input
+                          type="file"
+                          ref={refAudioGiroInput}
+                          onChange={handleUploadAudioGiro}
+                          accept="audio/*"
+                          className="hidden"
                         />
-                        <button 
+                        <button
                           onClick={() => refAudioGiroInput.current?.click()}
-                          className="w-full bg-slate-800 hover:bg-slate-700 p-2.5 rounded-xl border border-slate-700 text-slate-300 flex items-center justify-center gap-2 transition-all"
+                          className="w-full bg-slate-800 hover:bg-slate-700 p-2.5 rounded-xl border border-slate-700 text-slate-300 flex items-center justify-center gap-2 transition-all cursor-pointer"
                         >
                           <Upload size={14} className="text-blue-400" />
                           <span className="truncate">{audioGiroUrl ? "Giro Carregado" : "Som de Giro"}</span>
                         </button>
                       </div>
 
-                      {/* Som de Vitória */}
                       <div>
-                        <input 
-                          type="file" 
-                          ref={refAudioVitoriaInput} 
-                          onChange={handleUploadAudioVitoria} 
-                          accept="audio/*" 
-                          className="hidden" 
+                        <input
+                          type="file"
+                          ref={refAudioVitoriaInput}
+                          onChange={handleUploadAudioVitoria}
+                          accept="audio/*"
+                          className="hidden"
                         />
-                        <button 
+                        <button
                           onClick={() => refAudioVitoriaInput.current?.click()}
-                          className="w-full bg-slate-800 hover:bg-slate-700 p-2.5 rounded-xl border border-slate-700 text-slate-300 flex items-center justify-center gap-2 transition-all"
+                          className="w-full bg-slate-800 hover:bg-slate-700 p-2.5 rounded-xl border border-slate-700 text-slate-300 flex items-center justify-center gap-2 transition-all cursor-pointer"
                         >
                           <Upload size={14} className="text-emerald-400" />
                           <span className="truncate">{audioVitoriaUrl ? "Vitória Carregado" : "Som de Vitória"}</span>
@@ -445,7 +527,7 @@ export const RoletaPremios: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* 4. GERENCIAMENTO DE ITENS E PORCENTAGEM JUSTA */}
+                  {/* 5. GERENCIAMENTO DE ITENS & PROBABILIDADES AUTOMÁTICAS (SOMA = 100%) */}
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
@@ -453,7 +535,7 @@ export const RoletaPremios: React.FC = () => {
                       </label>
                       <button
                         onClick={handlePorcentagemJusta}
-                        className="bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/40 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all"
+                        className="bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/40 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
                         title="Iguala a porcentagem de chance para todos os itens da roleta"
                       >
                         <Scale size={14} /> Porcentagem Justa
@@ -468,7 +550,7 @@ export const RoletaPremios: React.FC = () => {
                           <input
                             type="color"
                             value={item.cor}
-                            onChange={(e) => atualizarItem(item.id, 'cor', e.target.value)}
+                            onChange={(e) => atualizarItemTextoOuCor(item.id, 'cor', e.target.value)}
                             className="w-8 h-8 rounded cursor-pointer bg-transparent border-0"
                             title="Escolher cor personalizada para este item"
                           />
@@ -477,20 +559,22 @@ export const RoletaPremios: React.FC = () => {
                           <input
                             type="text"
                             value={item.texto}
-                            onChange={(e) => atualizarItem(item.id, 'texto', e.target.value)}
+                            onChange={(e) => atualizarItemTextoOuCor(item.id, 'texto', e.target.value)}
                             className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white focus:ring-1 focus:ring-blue-500 outline-none"
                             placeholder={`Item ${index + 1}`}
                           />
 
-                          {/* Probabilidade (%) */}
+                          {/* Probabilidade Ponderada (%) - Reajuste Automático do Restante para Soma = 100% */}
                           <div className="flex items-center gap-1 bg-slate-800 px-2 py-1.5 rounded-lg border border-slate-700 w-24">
                             <input
                               type="number"
                               min="0"
                               max="100"
+                              step="0.1"
                               value={item.peso}
-                              onChange={(e) => atualizarItem(item.id, 'peso', Math.max(0, Number(e.target.value)))}
+                              onChange={(e) => atualizarPesoItem(item.id, Number(e.target.value))}
                               className="w-full bg-transparent text-right font-bold text-xs text-emerald-400 outline-none"
+                              title="Altera a porcentagem deste item e redistribui o restante automaticamente para somar 100%"
                             />
                             <span className="text-xs text-slate-400 font-bold">%</span>
                           </div>
@@ -498,7 +582,7 @@ export const RoletaPremios: React.FC = () => {
                           {/* Botão Excluir */}
                           <button
                             onClick={() => removerItem(item.id)}
-                            className="p-2 text-slate-500 hover:text-rose-400 transition-colors"
+                            className="p-2 text-slate-500 hover:text-rose-400 transition-colors cursor-pointer"
                             title="Remover este item"
                           >
                             <Trash2 size={16} />
@@ -510,24 +594,40 @@ export const RoletaPremios: React.FC = () => {
                     {/* Botão Adicionar Novo Item */}
                     <button
                       onClick={adicionarItem}
-                      className="w-full bg-slate-800 hover:bg-slate-700 border border-dashed border-slate-600 text-slate-300 font-bold py-3 rounded-xl flex items-center justify-center gap-2 text-xs transition-all"
+                      className="w-full bg-slate-800 hover:bg-slate-700 border border-dashed border-slate-600 text-slate-300 font-bold py-3 rounded-xl flex items-center justify-center gap-2 text-xs transition-all cursor-pointer"
                     >
                       <Plus size={16} /> ADICIONAR NOVO ITEM
                     </button>
                   </div>
 
-                  {/* AJUSTE DE SENHA DO ADMIN */}
-                  {protegidoPorSenha && (
-                    <div className="pt-4 border-t border-slate-700/60 flex items-center justify-between text-xs text-slate-400">
-                      <span>Senha de Proteção Ativa:</span>
-                      <input 
-                        type="text" 
-                        value={senhaAdmin} 
-                        onChange={(e) => setSenhaAdmin(e.target.value)}
-                        className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-center font-mono text-white text-xs w-24"
+                  {/* 6. CAMPO PARA ALTERAR SENHA DO ADMIN */}
+                  <form onSubmit={handleSalvarNovaSenhaAdmin} className="pt-4 border-t border-slate-700/60 space-y-3">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                      <KeyRound size={16} className="text-amber-400" /> Alterar Senha de Admin
+                    </label>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="password"
+                        placeholder="Nova senha..."
+                        value={novaSenhaAdminInput}
+                        onChange={(e) => setNovaSenhaAdminInput(e.target.value)}
+                        className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs outline-none focus:ring-1 focus:ring-amber-500"
                       />
+                      <button
+                        type="submit"
+                        className="bg-amber-600 hover:bg-amber-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition-all cursor-pointer"
+                      >
+                        Salvar Senha
+                      </button>
                     </div>
-                  )}
+
+                    {mensagemSenhaAlterada && (
+                      <p className="text-xs text-emerald-400 font-bold flex items-center gap-1">
+                        <Check size={14} /> Senha de administrador alterada com sucesso!
+                      </p>
+                    )}
+                  </form>
 
                 </div>
               )}
