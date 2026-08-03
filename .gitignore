@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Arquivos IA
+.antigravity.md
+prompt.md
+.agent/
+

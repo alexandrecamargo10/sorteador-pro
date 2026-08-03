@@ -11,3 +11,15 @@
     @apply antialiased;
   }
 }
+
+.clip-pointer {
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
