@@ -73,14 +73,20 @@ No lado direito (ou abaixo da roleta, no modo Tela Cheia), você encontra o pain
 * Envie seus próprios arquivos de áudio para o **Som de Giro** da roleta e o **Som de Vitória**.
 * *(Caso nenhum arquivo seja enviado, o sistema utiliza efeitos sonoros sintéticos nativos 100% offline).*
 
-#### 📊 6. Gerenciamento de Itens e Probabilidades (%)
-* **Adicionar / Remover Itens:** Clique em `ADICIONAR NOVO ITEM` ou no ícone da lixeira para gerenciar os itens.
-* **Redistribuição Automática de Probabilidade (100%):**
-  - Ao alterar o peso/porcentagem (%) de um item, o saldo restante para 100% é dividido igualmente entre todos os outros itens em tempo real.
-  - *Exemplo:* Se definir um item com **50%**, os 50% restantes serão automaticamente divididos entre os demais itens.
-* **Botão "Porcentagem Justa":** Recalcula a porcentagem para que todos os itens tenham exatamente a mesma chance.
+#### 🎲 6. Modo de Seleção (Por Probabilidade % ou Por Quantidade Exata)
+* **Modo Por Probabilidade (%):** Cada item possui uma porcentagem de chance. O sorteio é contínuo e ponderado.
+  - **Redistribuição Automática de Probabilidade (100%):** Ao alterar a porcentagem (%) de um item, o saldo restante para 100% é dividido igualmente entre todos os outros itens em tempo real.
+  - **Botão "Porcentagem Justa":** Recalcula a porcentagem para que todos os itens tenham exatamente a mesma chance.
+* **Modo Por Quantidade (Sessão):** Permite definir exatamente quantas vezes cada item será sorteado dentro de uma sessão de giros.
+  - *Exemplo:* Se o Item 1 tiver 3 sorteios e o Item 2 tiver 2 sorteios, a sessão terá um total de 5 giros.
+  - Durante os 5 giros, o Item 1 sairá exatamente 3 vezes e o Item 2 sairá 2 vezes, em **ordem totalmente aleatória**.
+  - O contador exibe os giros restantes (ex: `4 / 5 giros restantes`).
+  - O botão **`Reiniciar Sessão`** permite restaurar a urna da sessão a qualquer momento para iniciar uma nova rodada.
 
-#### 🔑 7. Alterar Senha de Admin
+#### 📊 7. Gerenciamento de Itens
+* **Adicionar / Remover Itens:** Clique em `ADICIONAR NOVO ITEM` ou no ícone da lixeira para gerenciar os itens.
+
+#### 🔑 8. Alterar Senha de Admin
 * No final do painel desbloqueado, digite uma nova senha no campo **"Alterar Senha de Admin"** e clique em **`Salvar Senha`**.
 
 ---

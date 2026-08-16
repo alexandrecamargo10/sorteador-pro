@@ -31,10 +31,10 @@ export const ESQUEMAS_CORES: EsquemaCores[] = [
 
 // Itens iniciais padrão
 export const ITENS_PADRAO_ROLETA: ItemRoleta[] = [
-  { id: '1', texto: '🎁 Vale Compras R$ 100', peso: 25, cor: '#3b82f6' },
-  { id: '2', texto: '🍕 Pizza Grátis', peso: 25, cor: '#8b5cf6' },
-  { id: '3', texto: '☕ Cafezinho Especial', peso: 25, cor: '#ec4899' },
-  { id: '4', texto: '⭐ 50% de Desconto', peso: 25, cor: '#f59e0b' },
+  { id: '1', texto: '🎁 Vale Compras R$ 100', peso: 25, quantidadeSorteios: 1, cor: '#3b82f6' },
+  { id: '2', texto: '🍕 Pizza Grátis', peso: 25, quantidadeSorteios: 1, cor: '#8b5cf6' },
+  { id: '3', texto: '☕ Cafezinho Especial', peso: 25, quantidadeSorteios: 1, cor: '#ec4899' },
+  { id: '4', texto: '⭐ 50% de Desconto', peso: 25, quantidadeSorteios: 1, cor: '#f59e0b' },
 ];
 
 /**
@@ -135,6 +135,51 @@ export const sortearItemRoleta = (itens: ItemRoleta[]): { itemVencedor: ItemRole
   // Fallback de segurança para o último item
   const ultimoIndice = itens.length - 1;
   return { itemVencedor: itens[ultimoIndice], indiceVencedor: ultimoIndice };
+};
+
+/**
+ * Cria a urna da sessão com base no número de sorteios configurado em 'quantidadeSorteios' de cada item.
+ */
+export const criarUrnaSessao = (itens: ItemRoleta[]): string[] => {
+  const urna: string[] = [];
+  itens.forEach(item => {
+    const qtd = Math.max(1, Math.floor(item.quantidadeSorteios || 1));
+    for (let i = 0; i < qtd; i++) {
+      urna.push(item.id);
+    }
+  });
+  return urna;
+};
+
+/**
+ * Realiza o sorteio de um item por quantidade exata de giros na sessão.
+ * Remove 1 ocorrência do item sorteado da urna da sessão.
+ */
+export const sortearItemPorQuantidade = (
+  itens: ItemRoleta[],
+  urnaAtual: string[]
+): { itemVencedor: ItemRoleta; indiceVencedor: number; novaUrna: string[] } => {
+  if (urnaAtual.length === 0) {
+    throw new Error('A urna da sessão está vazia.');
+  }
+
+  // Escolhe um índice aleatório dentro dos itens restantes na sessão
+  const indiceUrnaSorteado = Math.floor(Math.random() * urnaAtual.length);
+  const idVencedor = urnaAtual[indiceUrnaSorteado];
+
+  // Encontra o objeto do item vencedor e o seu índice na lista original de itens da roleta
+  const itemVencedor = itens.find(item => item.id === idVencedor) || itens[0];
+  const indiceVencedor = itens.findIndex(item => item.id === idVencedor);
+
+  // Remove uma ocorrência deste item da urna da sessão
+  const novaUrna = [...urnaAtual];
+  novaUrna.splice(indiceUrnaSorteado, 1);
+
+  return {
+    itemVencedor,
+    indiceVencedor: Math.max(0, indiceVencedor),
+    novaUrna
+  };
 };
 
 /**

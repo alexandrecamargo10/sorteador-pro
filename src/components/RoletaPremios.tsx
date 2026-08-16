@@ -1,29 +1,31 @@
 import React, { useState, useRef } from 'react';
-import type { ItemRoleta, HistoricoRoleta } from '../types/roleta';
-import {
-  ITENS_PADRAO_ROLETA,
-  ESQUEMAS_CORES,
+import type { ItemRoleta, HistoricoRoleta, ModoSorteioRoleta } from '../types/roleta';
+import { 
+  ITENS_PADRAO_ROLETA, 
+  ESQUEMAS_CORES, 
   aplicarPorcentagemJusta,
   redistribuirPorcentagens,
   sortearItemRoleta,
+  criarUrnaSessao,
+  sortearItemPorQuantidade,
   aplicarEsquemaCores,
   tocarSomCliqueSintetizado,
-  tocarSomVitoriaSintetizado
+  tocarSomVitoriaSintetizado 
 } from '../utils/logicaRoleta';
 import { RoletaCanvas } from './RoletaCanvas';
-import {
-  Settings,
-  Lock,
-  Unlock,
-  Plus,
-  Trash2,
-  RefreshCcw,
-  Trophy,
-  Volume2,
-  Palette,
-  Scale,
-  Clock,
-  ChevronDown,
+import { 
+  Settings, 
+  Lock, 
+  Unlock, 
+  Plus, 
+  Trash2, 
+  RefreshCcw, 
+  Trophy, 
+  Volume2, 
+  Palette, 
+  Scale, 
+  Clock, 
+  ChevronDown, 
   ChevronUp,
   Upload,
   Eye,
@@ -31,7 +33,10 @@ import {
   Maximize2,
   Minimize2,
   KeyRound,
-  Check
+  Check,
+  Percent,
+  Hash,
+  RotateCcw
 } from 'lucide-react';
 
 export const RoletaPremios: React.FC = () => {
@@ -43,7 +48,11 @@ export const RoletaPremios: React.FC = () => {
   const [vencedorAtual, setVencedorAtual] = useState<ItemRoleta | null>(null);
   const [historico, setHistorico] = useState<HistoricoRoleta[]>([]);
 
-  // Novos Estados Solicitados (Exibição do Histórico, Tela Cheia e Alteração de Senha)
+  // Estado do Modo de Sorteio (Porcentagem ou Quantidade Exata por Sessão)
+  const [modoSorteio, setModoSorteio] = useState<ModoSorteioRoleta>('porcentagem');
+  const [urnaSessao, setUrnaSessao] = useState<string[]>(() => criarUrnaSessao(ITENS_PADRAO_ROLETA));
+
+  // Estados Solicitados (Exibição do Histórico, Tela Cheia e Alteração de Senha)
   const [exibirHistorico, setExibirHistorico] = useState<boolean>(true);
   const [modoTelaCheia, setModoTelaCheia] = useState<boolean>(false);
 
@@ -73,13 +82,30 @@ export const RoletaPremios: React.FC = () => {
   const girarRoleta = () => {
     if (estaGirando || itens.length === 0) return;
 
+    let itemVencedor: ItemRoleta;
+    let indiceVencedor: number;
+
+    // Se estiver no modo por Quantidade de Sorteios por Sessão
+    if (modoSorteio === 'quantidade') {
+      if (urnaSessao.length === 0) {
+        alert('A sessão de giros foi concluída! Clique em "Reiniciar Sessão" para iniciar uma nova rodada.');
+        return;
+      }
+      const resultado = sortearItemPorQuantidade(itens, urnaSessao);
+      itemVencedor = resultado.itemVencedor;
+      indiceVencedor = resultado.indiceVencedor;
+      setUrnaSessao(resultado.novaUrna);
+    } else {
+      // Modo por Probabilidade / Porcentagem (%)
+      const resultado = sortearItemRoleta(itens);
+      itemVencedor = resultado.itemVencedor;
+      indiceVencedor = resultado.indiceVencedor;
+    }
+
     setEstaGirando(true);
     setVencedorAtual(null);
 
-    // 1. Determina o vencedor por probabilidade ponderada
-    const { itemVencedor, indiceVencedor } = sortearItemRoleta(itens);
-
-    // 2. Cálculo dos Ângulos para alinhar com o Ponteiro no Topo (1.5 * Math.PI)
+    // Cálculo dos Ângulos para alinhar com o Ponteiro no Topo (1.5 * Math.PI)
     const totalFatias = itens.length;
     const anguloPorFatia = (2 * Math.PI) / totalFatias;
     const anguloCentroFatia = (indiceVencedor + 0.5) * anguloPorFatia;
@@ -158,10 +184,13 @@ export const RoletaPremios: React.FC = () => {
       id: novoId,
       texto: `Item ${itens.length + 1}`,
       peso: 10,
+      quantidadeSorteios: 1,
       cor: '#3b82f6'
     };
     const novaLista = [...itens, novoItem];
-    setItens(aplicarPorcentagemJusta(novaLista));
+    const listaComPeso = aplicarPorcentagemJusta(novaLista);
+    setItens(listaComPeso);
+    setUrnaSessao(criarUrnaSessao(listaComPeso));
   };
 
   const removerItem = (id: string) => {
@@ -170,13 +199,28 @@ export const RoletaPremios: React.FC = () => {
       return;
     }
     const novaLista = itens.filter(item => item.id !== id);
-    setItens(aplicarPorcentagemJusta(novaLista));
+    const listaComPeso = aplicarPorcentagemJusta(novaLista);
+    setItens(listaComPeso);
+    setUrnaSessao(criarUrnaSessao(listaComPeso));
   };
 
-  // Atualização com Distribuição Automática de Probabilidades (Soma = 100%)
+  // Atualização de Probabilidade (%)
   const atualizarPesoItem = (id: string, novoPeso: number) => {
     const itensAtualizados = redistribuirPorcentagens(itens, id, novoPeso);
     setItens(itensAtualizados);
+  };
+
+  // Atualização da Quantidade de Sorteios por Item (Modo por Quantidade)
+  const atualizarQuantidadeSorteiosItem = (id: string, novaQtd: number) => {
+    const qtdValida = Math.max(1, Math.floor(novaQtd));
+    const novaLista = itens.map(item => {
+      if (item.id === id) {
+        return { ...item, quantidadeSorteios: qtdValida };
+      }
+      return item;
+    });
+    setItens(novaLista);
+    setUrnaSessao(criarUrnaSessao(novaLista));
   };
 
   const atualizarItemTextoOuCor = (id: string, campo: 'texto' | 'cor', valor: string) => {
@@ -190,6 +234,18 @@ export const RoletaPremios: React.FC = () => {
 
   const handlePorcentagemJusta = () => {
     setItens(aplicarPorcentagemJusta(itens));
+  };
+
+  const handleMudarModoSorteio = (novoModo: ModoSorteioRoleta) => {
+    setModoSorteio(novoModo);
+    if (novoModo === 'quantidade') {
+      setUrnaSessao(criarUrnaSessao(itens));
+    }
+  };
+
+  const handleReiniciarSessao = () => {
+    setUrnaSessao(criarUrnaSessao(itens));
+    setVencedorAtual(null);
   };
 
   const handleMudarEsquemaCores = (esquemaId: string) => {
@@ -229,7 +285,6 @@ export const RoletaPremios: React.FC = () => {
   // Alternar Minimizar / Expandir Painel de Ajustes
   const togglePainelAberto = () => {
     if (painelAberto) {
-      // Ao minimizar/fechar o painel com o status Protegido ativo, exige a senha para expandir novamente
       if (protegidoPorSenha) {
         setAdminAutenticado(false);
         setSenhaInformada('');
@@ -237,7 +292,6 @@ export const RoletaPremios: React.FC = () => {
       }
       setPainelAberto(false);
     } else {
-      // Ao expandir o painel, se protegido por senha, força solicitação da senha
       if (protegidoPorSenha && !adminAutenticado) {
         setSenhaInformada('');
         setErroSenha('');
@@ -266,24 +320,27 @@ export const RoletaPremios: React.FC = () => {
     setTimeout(() => setMensagemSenhaAlterada(false), 3000);
   };
 
+  const totalGirosSessao = itens.reduce((acc, i) => acc + (i.quantidadeSorteios || 1), 0);
+
   return (
-    <div className={`w-full max-w-6xl transition-all duration-300 ${modoTelaCheia
-      ? 'flex flex-col items-center max-w-4xl mx-auto space-y-8'
-      : 'grid grid-cols-1 lg:grid-cols-12 gap-8'
-      }`}>
+    <div className={`w-full max-w-6xl transition-all duration-300 ${
+      modoTelaCheia 
+        ? 'flex flex-col items-center max-w-4xl mx-auto space-y-8' 
+        : 'grid grid-cols-1 lg:grid-cols-12 gap-8'
+    }`}>
 
       {/* ========================================================= */}
       {/* SEÇÃO PRINCIPAL DA ROLETA (Livre para qualquer usuário)  */}
       {/* ========================================================= */}
       <section className={`${modoTelaCheia ? 'w-full flex flex-col items-center gap-6' : 'lg:col-span-7 flex flex-col items-center gap-6'}`}>
-
+        
         {/* CONTAINER DA ROLETA */}
         <div className="relative w-full bg-slate-800/50 p-6 md:p-8 rounded-[2.5rem] border border-slate-700 shadow-2xl flex flex-col items-center justify-center overflow-hidden">
-
-          <RoletaCanvas
-            itens={itens}
-            anguloAtual={anguloAtual}
-            estaGirando={estaGirando}
+          
+          <RoletaCanvas 
+            itens={itens} 
+            anguloAtual={anguloAtual} 
+            estaGirando={estaGirando} 
           />
 
           {/* Anúncio do Vencedor */}
@@ -298,17 +355,41 @@ export const RoletaPremios: React.FC = () => {
           )}
         </div>
 
+        {/* CONTADOR DE SESSÃO SE MODO FOR QUANTIDADE */}
+        {modoSorteio === 'quantidade' && (
+          <div className="w-full bg-slate-800/80 p-4 rounded-2xl border border-slate-700 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2">
+              <Hash size={16} className="text-amber-400" />
+              <span className="text-slate-300 font-bold uppercase">Sessão por Quantidade:</span>
+              <span className="bg-amber-500/20 text-amber-300 font-black px-2.5 py-1 rounded-lg border border-amber-500/30">
+                {urnaSessao.length} / {totalGirosSessao} giros restantes
+              </span>
+            </div>
+            <button
+              onClick={handleReiniciarSessao}
+              className="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+              title="Reinicia os giros da sessão atual"
+            >
+              <RotateCcw size={14} /> Reiniciar Sessão
+            </button>
+          </div>
+        )}
+
         {/* BOTÃO GIRAR ROLETA */}
         <button
-          disabled={estaGirando || itens.length === 0}
+          disabled={estaGirando || itens.length === 0 || (modoSorteio === 'quantidade' && urnaSessao.length === 0)}
           onClick={girarRoleta}
           className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 disabled:from-slate-800 disabled:to-slate-800 disabled:text-slate-600 py-6 rounded-[2rem] text-3xl font-black shadow-xl transition-all active:scale-[0.98] uppercase tracking-tighter text-white flex items-center justify-center gap-3 cursor-pointer"
         >
           <RefreshCcw className={`${estaGirando ? 'animate-spin' : ''}`} size={32} />
-          {estaGirando ? 'GIRANDO ROLETA...' : 'GIRAR ROLETA'}
+          {estaGirando 
+            ? 'GIRANDO ROLETA...' 
+            : modoSorteio === 'quantidade' && urnaSessao.length === 0 
+              ? 'SESSÃO CONCLUÍDA' 
+              : 'GIRAR ROLETA'}
         </button>
 
-        {/* HISTÓRICO DE GANHADORES DA ROLETA (Condicionado à opção de Exibir/Ocultar) */}
+        {/* HISTÓRICO DE GANHADORES DA ROLETA */}
         {exibirHistorico && (
           <div className="w-full bg-slate-800/30 p-6 rounded-3xl border border-slate-700 h-60 flex flex-col transition-all">
             <h4 className="text-xs font-black text-slate-400 mb-4 uppercase tracking-[0.2em] flex items-center gap-2">
@@ -338,7 +419,7 @@ export const RoletaPremios: React.FC = () => {
       {/* ========================================================= */}
       <section className={`${modoTelaCheia ? 'w-full space-y-6' : 'lg:col-span-5 space-y-6'}`}>
         <div className="bg-slate-800/50 rounded-3xl border border-slate-700 shadow-xl overflow-hidden">
-
+          
           {/* CABEÇALHO DO PAINEL DE CONFIGURAÇÃO */}
           <div className="p-5 bg-slate-800/80 border-b border-slate-700 flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2">
@@ -348,10 +429,11 @@ export const RoletaPremios: React.FC = () => {
 
             <div className="flex items-center gap-2">
               {/* Botão de Trava por Senha */}
-              <button
+              <button 
                 onClick={toggleProtegidoPorSenha}
-                className={`p-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1 border cursor-pointer ${protegidoPorSenha ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' : 'bg-slate-700 text-slate-400 border-slate-600'
-                  }`}
+                className={`p-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1 border cursor-pointer ${
+                  protegidoPorSenha ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' : 'bg-slate-700 text-slate-400 border-slate-600'
+                }`}
                 title={protegidoPorSenha ? "Proteção por senha ATIVADA (clique para alternar)" : "Ativar proteção por senha"}
               >
                 {protegidoPorSenha ? <Lock size={14} /> : <Unlock size={14} />}
@@ -359,7 +441,7 @@ export const RoletaPremios: React.FC = () => {
               </button>
 
               {/* Botão de Minimizar / Expandir Painel */}
-              <button
+              <button 
                 onClick={togglePainelAberto}
                 className="p-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors cursor-pointer"
                 title={painelAberto ? "Minimizar painel" : "Expandir painel (exige senha se protegido)"}
@@ -381,9 +463,9 @@ export const RoletaPremios: React.FC = () => {
                   </div>
                   <h3 className="font-bold text-slate-200 text-lg">Acesso Restrito ao Admin</h3>
                   <p className="text-xs text-slate-400 max-w-xs mx-auto">
-                    As configurações de probabilidade, áudio, visual e itens estão protegidas por senha. Senha padrão: 1234.
+                    As configurações de probabilidade, quantidade, áudio, visual e itens estão protegidas por senha.
                   </p>
-
+                  
                   <input
                     type="password"
                     placeholder="Digite a senha..."
@@ -405,7 +487,40 @@ export const RoletaPremios: React.FC = () => {
                 /* PAINEL LIBERADO DE CONFIGURAÇÕES */
                 <div className="space-y-6">
 
-                  {/* 1. OPÇÕES VISUAIS: MODO TELA CHEIA E EXIBIÇÃO DE HISTÓRICO */}
+                  {/* 1. MODO DE SELEÇÃO: PORCENTAGEM (%) VS QUANTIDADE FIXA (SESSÃO) */}
+                  <div className="bg-slate-900/40 p-4 rounded-2xl border border-slate-700/60 space-y-3">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                      <Hash size={16} className="text-amber-400" /> Modo de Seleção do Sorteio
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => handleMudarModoSorteio('porcentagem')}
+                        className={`p-3 rounded-xl border font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                          modoSorteio === 'porcentagem'
+                            ? 'bg-blue-600/30 text-blue-300 border-blue-500'
+                            : 'bg-slate-800 hover:bg-slate-700 text-slate-400 border-slate-700'
+                        }`}
+                      >
+                        <Percent size={16} />
+                        <span>Por Probabilidade (%)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleMudarModoSorteio('quantidade')}
+                        className={`p-3 rounded-xl border font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                          modoSorteio === 'quantidade'
+                            ? 'bg-amber-600/30 text-amber-300 border-amber-500'
+                            : 'bg-slate-800 hover:bg-slate-700 text-slate-400 border-slate-700'
+                        }`}
+                      >
+                        <Hash size={16} />
+                        <span>Por Quantidade (Sessão)</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 2. OPÇÕES VISUAIS: MODO TELA CHEIA E EXIBIÇÃO DE HISTÓRICO */}
                   <div className="bg-slate-900/40 p-4 rounded-2xl border border-slate-700/60 space-y-3">
                     <label className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
                       <Maximize2 size={16} className="text-blue-400" /> Exibição & Layout
@@ -415,10 +530,11 @@ export const RoletaPremios: React.FC = () => {
                       {/* Toggle de Modo Tela Cheia (Centralizado) */}
                       <button
                         onClick={() => setModoTelaCheia(!modoTelaCheia)}
-                        className={`p-3 rounded-xl border font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${modoTelaCheia
-                          ? 'bg-blue-600/30 text-blue-300 border-blue-500'
-                          : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
-                          }`}
+                        className={`p-3 rounded-xl border font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                          modoTelaCheia 
+                            ? 'bg-blue-600/30 text-blue-300 border-blue-500' 
+                            : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                        }`}
                       >
                         {modoTelaCheia ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
                         <span>{modoTelaCheia ? "Sair da Tela Cheia" : "Modo Tela Cheia"}</span>
@@ -427,10 +543,11 @@ export const RoletaPremios: React.FC = () => {
                       {/* Toggle de Ocultar / Exibir Histórico */}
                       <button
                         onClick={() => setExibirHistorico(!exibirHistorico)}
-                        className={`p-3 rounded-xl border font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${exibirHistorico
-                          ? 'bg-emerald-600/30 text-emerald-300 border-emerald-500'
-                          : 'bg-slate-800 hover:bg-slate-700 text-slate-400 border-slate-700'
-                          }`}
+                        className={`p-3 rounded-xl border font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                          exibirHistorico 
+                            ? 'bg-emerald-600/30 text-emerald-300 border-emerald-500' 
+                            : 'bg-slate-800 hover:bg-slate-700 text-slate-400 border-slate-700'
+                        }`}
                       >
                         {exibirHistorico ? <Eye size={16} /> : <EyeOff size={16} />}
                         <span>{exibirHistorico ? "Histórico Visível" : "Histórico Oculto"}</span>
@@ -438,12 +555,12 @@ export const RoletaPremios: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* 2. TEMPO DE GIRO DA ROLETA */}
+                  {/* 3. TEMPO DE GIRO DA ROLETA */}
                   <div>
                     <label className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2 mb-2">
                       <Clock size={16} className="text-blue-400" /> Tempo de Giro: <span className="text-white text-sm font-black">{tempoGiro}s</span>
                     </label>
-                    <input
+                    <input 
                       type="range"
                       min="2"
                       max="12"
@@ -458,7 +575,7 @@ export const RoletaPremios: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* 3. ESQUEMAS DE CORES PRONTOS */}
+                  {/* 4. ESQUEMAS DE CORES PRONTOS */}
                   <div>
                     <label className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2 mb-3">
                       <Palette size={16} className="text-purple-400" /> Paletas de Cores Prontas
@@ -468,10 +585,11 @@ export const RoletaPremios: React.FC = () => {
                         <button
                           key={e.id}
                           onClick={() => handleMudarEsquemaCores(e.id)}
-                          className={`p-2.5 rounded-xl text-xs font-bold flex items-center justify-between border transition-all cursor-pointer ${esquemaSelecionado === e.id
-                            ? 'bg-blue-600/20 border-blue-500 text-white'
-                            : 'bg-slate-900/60 border-slate-700/60 text-slate-300 hover:bg-slate-900'
-                            }`}
+                          className={`p-2.5 rounded-xl text-xs font-bold flex items-center justify-between border transition-all cursor-pointer ${
+                            esquemaSelecionado === e.id 
+                              ? 'bg-blue-600/20 border-blue-500 text-white' 
+                              : 'bg-slate-900/60 border-slate-700/60 text-slate-300 hover:bg-slate-900'
+                          }`}
                         >
                           <span>{e.nome}</span>
                           <div className="flex -space-x-1">
@@ -484,7 +602,7 @@ export const RoletaPremios: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* 4. AUDIOS CUSTOMIZADOS */}
+                  {/* 5. AUDIOS CUSTOMIZADOS */}
                   <div className="bg-slate-900/40 p-4 rounded-2xl border border-slate-700/60 space-y-3">
                     <label className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
                       <Volume2 size={16} className="text-emerald-400" /> Sons Personalizados (Opcional)
@@ -492,14 +610,14 @@ export const RoletaPremios: React.FC = () => {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                       <div>
-                        <input
-                          type="file"
-                          ref={refAudioGiroInput}
-                          onChange={handleUploadAudioGiro}
-                          accept="audio/*"
-                          className="hidden"
+                        <input 
+                          type="file" 
+                          ref={refAudioGiroInput} 
+                          onChange={handleUploadAudioGiro} 
+                          accept="audio/*" 
+                          className="hidden" 
                         />
-                        <button
+                        <button 
                           onClick={() => refAudioGiroInput.current?.click()}
                           className="w-full bg-slate-800 hover:bg-slate-700 p-2.5 rounded-xl border border-slate-700 text-slate-300 flex items-center justify-center gap-2 transition-all cursor-pointer"
                         >
@@ -509,14 +627,14 @@ export const RoletaPremios: React.FC = () => {
                       </div>
 
                       <div>
-                        <input
-                          type="file"
-                          ref={refAudioVitoriaInput}
-                          onChange={handleUploadAudioVitoria}
-                          accept="audio/*"
-                          className="hidden"
+                        <input 
+                          type="file" 
+                          ref={refAudioVitoriaInput} 
+                          onChange={handleUploadAudioVitoria} 
+                          accept="audio/*" 
+                          className="hidden" 
                         />
-                        <button
+                        <button 
                           onClick={() => refAudioVitoriaInput.current?.click()}
                           className="w-full bg-slate-800 hover:bg-slate-700 p-2.5 rounded-xl border border-slate-700 text-slate-300 flex items-center justify-center gap-2 transition-all cursor-pointer"
                         >
@@ -527,19 +645,25 @@ export const RoletaPremios: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* 5. GERENCIAMENTO DE ITENS & PROBABILIDADES AUTOMÁTICAS (SOMA = 100%) */}
+                  {/* 6. GERENCIAMENTO DE ITENS & DEFINIÇÃO DE CHANCES/QUANTIDADES */}
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
                       <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
                         Itens na Roleta ({itens.length})
                       </label>
-                      <button
-                        onClick={handlePorcentagemJusta}
-                        className="bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/40 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
-                        title="Iguala a porcentagem de chance para todos os itens da roleta"
-                      >
-                        <Scale size={14} /> Porcentagem Justa
-                      </button>
+                      {modoSorteio === 'porcentagem' ? (
+                        <button
+                          onClick={handlePorcentagemJusta}
+                          className="bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/40 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                          title="Iguala a porcentagem de chance para todos os itens da roleta"
+                        >
+                          <Scale size={14} /> Porcentagem Justa
+                        </button>
+                      ) : (
+                        <span className="text-xs text-amber-300 font-bold bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-lg">
+                          Total Sessão: {totalGirosSessao} giros
+                        </span>
+                      )}
                     </div>
 
                     {/* LISTA DE ITENS */}
@@ -564,20 +688,32 @@ export const RoletaPremios: React.FC = () => {
                             placeholder={`Item ${index + 1}`}
                           />
 
-                          {/* Probabilidade Ponderada (%) - Reajuste Automático do Restante para Soma = 100% */}
-                          <div className="flex items-center gap-1 bg-slate-800 px-2 py-1.5 rounded-lg border border-slate-700 w-24">
-                            <input
-                              type="number"
-                              min="0"
-                              max="100"
-                              step="0.1"
-                              value={item.peso}
-                              onChange={(e) => atualizarPesoItem(item.id, Number(e.target.value))}
-                              className="w-full bg-transparent text-right font-bold text-xs text-emerald-400 outline-none"
-                              title="Altera a porcentagem deste item e redistribui o restante automaticamente para somar 100%"
-                            />
-                            <span className="text-xs text-slate-400 font-bold">%</span>
-                          </div>
+                          {/* MODO PORCENTAGEM (%) OU MODO QUANTIDADE FIXA */}
+                          {modoSorteio === 'porcentagem' ? (
+                            <div className="flex items-center gap-1 bg-slate-800 px-2 py-1.5 rounded-lg border border-slate-700 w-24" title="Altera a porcentagem deste item e redistribui o restante automaticamente para somar 100%">
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.1"
+                                value={item.peso}
+                                onChange={(e) => atualizarPesoItem(item.id, Number(e.target.value))}
+                                className="w-full bg-transparent text-right font-bold text-xs text-emerald-400 outline-none"
+                              />
+                              <span className="text-xs text-slate-400 font-bold">%</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1 bg-slate-800 px-2 py-1.5 rounded-lg border border-slate-700 w-24" title="Quantidade de vezes que este item será sorteado na sessão">
+                              <span className="text-[10px] text-slate-400 font-bold uppercase">Qtd:</span>
+                              <input
+                                type="number"
+                                min="1"
+                                value={item.quantidadeSorteios || 1}
+                                onChange={(e) => atualizarQuantidadeSorteiosItem(item.id, Number(e.target.value))}
+                                className="w-full bg-transparent text-right font-bold text-xs text-amber-400 outline-none"
+                              />
+                            </div>
+                          )}
 
                           {/* Botão Excluir */}
                           <button
@@ -600,17 +736,17 @@ export const RoletaPremios: React.FC = () => {
                     </button>
                   </div>
 
-                  {/* 6. CAMPO PARA ALTERAR SENHA DO ADMIN */}
+                  {/* 7. CAMPO PARA ALTERAR SENHA DO ADMIN */}
                   <form onSubmit={handleSalvarNovaSenhaAdmin} className="pt-4 border-t border-slate-700/60 space-y-3">
                     <label className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
                       <KeyRound size={16} className="text-amber-400" /> Alterar Senha de Admin
                     </label>
-
+                    
                     <div className="flex items-center gap-2">
-                      <input
-                        type="password"
-                        placeholder="Nova senha..."
-                        value={novaSenhaAdminInput}
+                      <input 
+                        type="password" 
+                        placeholder="Nova senha..." 
+                        value={novaSenhaAdminInput} 
                         onChange={(e) => setNovaSenhaAdminInput(e.target.value)}
                         className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs outline-none focus:ring-1 focus:ring-amber-500"
                       />

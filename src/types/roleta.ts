@@ -1,8 +1,11 @@
+export type ModoSorteioRoleta = 'porcentagem' | 'quantidade';
+
 export interface ItemRoleta {
   id: string;
   texto: string;
   peso: number; // Porcentagem de chance (0 a 100)
-  cor: string;  // Hexadecimal da cor do fatia
+  quantidadeSorteios: number; // Quantidade exata de vezes a ser sorteado na sessão
+  cor: string;  // Hexadecimal da cor da fatia
 }
 
 export interface EsquemaCores {
